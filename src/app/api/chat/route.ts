@@ -108,7 +108,7 @@ function runProjection(
 export async function POST(req: Request) {
   const { messages } = await req.json();
 
-  const result = streamText({
+  const result = await streamText({
     model: anthropic("claude-opus-4-5"),
     system: `You are a personal financial advisor AI with direct access to the user's investment portfolio data.
 You have tools to query their live portfolio including holdings, market data, Claude's analysis, and wealth projections.
