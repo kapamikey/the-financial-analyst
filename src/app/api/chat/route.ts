@@ -185,5 +185,6 @@ Format numbers as currency when relevant. Keep responses concise and focused.`,
     },
   });
 
-  return result.toDataStreamResponse();
+  // Cast needed: TypeScript can't resolve toDataStreamResponse on complex TOOLS generic in ai@3.4.33
+  return (result as unknown as { toDataStreamResponse: () => Response }).toDataStreamResponse();
 }

@@ -90,10 +90,10 @@ function CustomTooltip({ active, payload, label }: any) {
 export default function ProjectionPage() {
   const D = PROJECTION_DEFAULTS;
 
-  const [monthlyContrib, setMonthlyContrib] = useState(D.monthlyContribution);
-  const [annualReturn, setAnnualReturn] = useState(D.assumedAnnualReturn);
-  const [contribIncrease, setContribIncrease] = useState(D.annualContributionIncrease);
-  const [fiAge, setFiAge] = useState(D.targetFiAge);
+  const [monthlyContrib, setMonthlyContrib] = useState<number>(D.monthlyContribution);
+  const [annualReturn, setAnnualReturn] = useState<number>(D.assumedAnnualReturn);
+  const [contribIncrease, setContribIncrease] = useState<number>(D.annualContributionIncrease);
+  const [fiAge, setFiAge] = useState<number>(D.targetFiAge);
 
   const years = fiAge - D.currentAge + 5; // project 5 years past FI target
 
