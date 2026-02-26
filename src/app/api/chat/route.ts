@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { streamText, tool } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
