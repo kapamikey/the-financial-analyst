@@ -2,6 +2,7 @@
 
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { timeAgo } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +12,7 @@ interface HeaderProps {
 }
 
 export function Header({ title, lastUpdated }: HeaderProps) {
+  const router = useRouter();
   const [refreshState, setRefreshState] = useState<
     "idle" | "pending" | "running" | "done" | "error"
   >("idle");
@@ -37,7 +39,7 @@ export function Header({ title, lastUpdated }: HeaderProps) {
           setRefreshState("done");
           setTimeout(() => {
             setRefreshState("idle");
-            window.location.reload();
+            router.refresh();
           }, 1500);
         } else if (status === "failed") {
           clearInterval(poll);
