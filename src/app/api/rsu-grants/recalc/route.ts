@@ -19,12 +19,21 @@ async function fetchPrice(ticker: string): Promise<number | null> {
   }
 }
 
+/** Parse a vesting date string — handles both MM/DD/YYYY and YYYY-MM-DD. */
+function parseVestDate(dateStr: string): Date {
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
+    const [month, day, year] = dateStr.split("/");
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+  return new Date(dateStr);
+}
+
 /** Sum units from vesting events whose date is today or in the past. */
 function computeVestedUnits(schedule: RsuVestingEvent[]): number {
   const today = new Date();
   today.setHours(23, 59, 59, 999); // include today's vests
   return schedule
-    .filter((e) => new Date(e.date) <= today)
+    .filter((e) => parseVestDate(e.date) <= today)
     .reduce((sum, e) => sum + e.units, 0);
 }
 

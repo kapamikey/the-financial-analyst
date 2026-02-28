@@ -37,15 +37,24 @@ export function RsuWidget({ initialGrants }: RsuWidgetProps) {
   const vestedValue = currentPrice ? vestedUnits * currentPrice : null;
   const priceUpdated = grants[0]?.price_updated_at;
 
+  // Parse a vesting date — handles both MM/DD/YYYY and YYYY-MM-DD
+  function parseVestDate(dateStr: string): Date {
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
+      const [month, day, year] = dateStr.split("/");
+      return new Date(Number(year), Number(month) - 1, Number(day));
+    }
+    return new Date(dateStr);
+  }
+
   // Upcoming vests: flatten all vesting_schedule events, filter future, sort
-  const today = new Date().toISOString().slice(0, 10);
+  const todayMs = new Date().setHours(0, 0, 0, 0);
   const upcomingVests: Array<RsuVestingEvent & { ticker: string }> = grants
     .flatMap((g) =>
       (g.vesting_schedule ?? [])
-        .filter((e) => e.date >= today)
+        .filter((e) => parseVestDate(e.date).getTime() >= todayMs)
         .map((e) => ({ ...e, ticker: g.ticker }))
     )
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .sort((a, b) => parseVestDate(a.date).getTime() - parseVestDate(b.date).getTime())
     .slice(0, 6);
 
   function openAdd() {
