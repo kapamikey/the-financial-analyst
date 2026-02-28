@@ -61,11 +61,11 @@ export function DashboardContent({
       </div>
 
       {/* ── Row 2: Allocation donut + Category Cards (or Brokerage fallback) ── */}
-      <div className="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start">
         <div className="md:col-span-1">
           <AllocationChart snapshot={snapshot} />
         </div>
-        <div className="md:col-span-3 xl:col-span-4">
+        <div className="md:col-span-4">
           {hasCategories ? (
             <CategoryCards snapshot={snapshot} rsuGrants={rsuGrants} />
           ) : (

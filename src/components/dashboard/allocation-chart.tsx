@@ -64,57 +64,49 @@ export function AllocationChart({ snapshot }: AllocationChartProps) {
   return (
     <Card>
       <CardTitle>Asset Allocation</CardTitle>
-      <div className="flex items-center gap-4 mt-3">
-        {/* Donut chart */}
-        <div className="w-28 h-28 shrink-0">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={36}
-                outerRadius={52}
-                paddingAngle={2}
-                dataKey="value"
-                strokeWidth={0}
-              >
-                {data.map((entry) => (
-                  <Cell
-                    key={entry.key}
-                    fill={ASSET_COLORS[entry.key] ?? "#6b7280"}
-                  />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Legend */}
-        <div className="flex flex-col gap-2.5 flex-1">
-          {data.map((entry) => (
-            <div key={entry.key} className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{
-                    background: ASSET_COLORS[entry.key] ?? "#6b7280",
-                  }}
+      {/* Donut chart — centred, fixed height */}
+      <div className="w-full h-32 mt-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={42}
+              outerRadius={58}
+              paddingAngle={2}
+              dataKey="value"
+              strokeWidth={0}
+            >
+              {data.map((entry) => (
+                <Cell
+                  key={entry.key}
+                  fill={ASSET_COLORS[entry.key] ?? "#6b7280"}
                 />
-                <span className="text-xs text-gray-300">{entry.name}</span>
-              </div>
-              <div className="flex flex-col items-end">
-                <span className="text-xs font-mono text-white">
-                  {entry.pct.toFixed(1)}%
-                </span>
-                <span className="text-xs text-gray-500">
-                  {formatCurrency(entry.value, 0)}
-                </span>
-              </div>
+              ))}
+            </Pie>
+            <Tooltip content={<CustomTooltip />} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Legend — stacked below donut, no overflow */}
+      <div className="flex flex-col gap-2 mt-2">
+        {data.map((entry) => (
+          <div key={entry.key} className="flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <div
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ background: ASSET_COLORS[entry.key] ?? "#6b7280" }}
+              />
+              <span className="text-xs text-gray-300 truncate">{entry.name}</span>
             </div>
-          ))}
-        </div>
+            <div className="flex items-center gap-2 shrink-0 ml-2">
+              <span className="text-xs font-mono text-white">{entry.pct.toFixed(1)}%</span>
+              <span className="text-xs text-gray-500">{formatCurrency(entry.value, 0)}</span>
+            </div>
+          </div>
+        ))}
       </div>
     </Card>
   );

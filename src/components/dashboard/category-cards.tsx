@@ -25,7 +25,7 @@ export function CategoryCards({ snapshot, rsuGrants }: CategoryCardsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 h-full">
+    <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
       {CATEGORIES.map(({ key, label, icon }) => {
         const cfg = ACCOUNT_CATEGORY_CONFIG[key];
         const data = cats[key];
