@@ -80,10 +80,8 @@ export function DashboardContent({
         <ActionItems analysis={analysis} />
       </div>
 
-      {/* ── Row 4: RSU Widget (only when grants exist) ───────────────────────── */}
-      {rsuGrants.length > 0 && (
-        <RsuWidget initialGrants={rsuGrants} />
-      )}
+      {/* ── Row 4: RSU Widget ────────────────────────────────────────────────── */}
+      <RsuWidget initialGrants={rsuGrants} />
 
       {/* ── Row 5: Wealth Tracker (manual assets + debts) ────────────────────── */}
       <WealthTrackerCard initialAssets={manualAssets} initialDebts={manualDebts} />
