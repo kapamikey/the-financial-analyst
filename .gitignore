@@ -62,3 +62,4 @@ agent/*.py[cod]
 agent/.venv/
 agent/*.egg-info/
 agent/.ipynb_checkpoints/
+agent/notebooks/.ipynb_checkpoints/
