@@ -45,3 +45,20 @@ supabase/.temp/
 
 # UX previews / scratch files
 ux-preview.html
+
+# ── Agent (Python backend) ────────────────────────────────────────────────────
+agent/.env
+agent/access_tokens.json
+agent/access_tokens.enc
+agent/.token_salt
+agent/portfolio_snapshot.json
+agent/portfolio_history.json
+agent/enriched_portfolio.json
+agent/reports/
+agent/logs/
+agent/__pycache__/
+agent/**/__pycache__/
+agent/*.py[cod]
+agent/.venv/
+agent/*.egg-info/
+agent/.ipynb_checkpoints/

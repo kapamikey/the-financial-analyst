@@ -1,0 +1,21 @@
+# Financial Analyst Agent — Linux cron schedule
+# Runs Mon/Wed/Fri at 7am local time
+#
+# Install: crontab -e  (then paste the line below, adjusting the path)
+#
+# ┌───── minute (0)
+# │ ┌─── hour (7)
+# │ │ ┌─ day of month (*)
+# │ │ │ ┌ month (*)
+# │ │ │ │ ┌ day of week (1=Mon, 3=Wed, 5=Fri)
+# │ │ │ │ │
+0 7 * * 1,3,5 cd /path/to/financial-analyst-agent && /path/to/uv run python run_pipeline.py >> logs/cron.log 2>&1
+
+# ── Notes ──────────────────────────────────────────────────────────────────────
+# Replace /path/to/financial-analyst-agent with your actual project directory.
+# Replace /path/to/uv with the output of: which uv
+# Example (assuming uv installed to ~/.local/bin):
+# 0 7 * * 1,3,5 cd /home/user/financial-analyst-agent && /home/user/.local/bin/uv run python run_pipeline.py >> logs/cron.log 2>&1
+#
+# To run the refresh poller as a background service on Linux, use systemd instead:
+# See: https://systemd.io/ — create a .service unit for poll_refresh.py

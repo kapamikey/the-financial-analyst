@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Analyst Agent — Connect Accounts</title>
+    <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { font-size: 1.8rem; margin-bottom: 0.5rem; color: #f8fafc; }
+        .subtitle { color: #94a3b8; margin-bottom: 2rem; }
+        .card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #334155;
+        }
+        .card h2 { font-size: 1.2rem; margin-bottom: 1rem; color: #f1f5f9; }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-secondary { background: #334155; color: #e2e8f0; }
+        .btn-secondary:hover { background: #475569; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .connect-row {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .connect-row input {
+            flex: 1;
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            background: #0f172a;
+            color: #e2e8f0;
+            font-size: 1rem;
+        }
+        .connect-row input::placeholder { color: #64748b; }
+        .status { padding: 0.5rem 1rem; border-radius: 6px; margin-top: 1rem; font-size: 0.9rem; }
+        .status-success { background: #064e3b; color: #6ee7b7; }
+        .status-error { background: #7f1d1d; color: #fca5a5; }
+        .status-info { background: #1e3a5f; color: #93c5fd; }
+        .connected-list { list-style: none; padding: 0; }
+        .connected-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .connected-list li::before { content: "✅"; }
+        .holdings-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        .holdings-table th, .holdings-table td {
+            padding: 0.6rem 0.8rem;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+            font-size: 0.9rem;
+        }
+        .holdings-table th { color: #94a3b8; font-weight: 600; }
+        .positive { color: #4ade80; }
+        .negative { color: #f87171; }
+        .loading { color: #94a3b8; font-style: italic; }
+        .summary-row {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        .summary-item {
+            background: #0f172a;
+            padding: 1rem;
+            border-radius: 8px;
+            flex: 1;
+            min-width: 150px;
+        }
+        .summary-label { font-size: 0.8rem; color: #64748b; margin-bottom: 0.25rem; }
+        .summary-value { font-size: 1.4rem; font-weight: 700; color: #f8fafc; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Financial Analyst Agent</h1>
+        <p class="subtitle">Connect your brokerage accounts via Plaid to build your unified portfolio view.</p>
+
+        <!-- Connect Account Card -->
+        <div class="card">
+            <h2>Connect a Brokerage Account</h2>
+            <p style="color: #94a3b8; margin-bottom: 1rem; font-size: 0.9rem;">
+                Give each connection a nickname (e.g., "stash", "robinhood", "sofi", "fidelity") so you can identify it later.
+            </p>
+            <div class="connect-row">
+                <input type="text" id="nickname" placeholder='Nickname (e.g., "stash")' />
+                <button class="btn btn-primary" id="connect-btn" onclick="connectAccount()">
+                    Connect Account
+                </button>
+            </div>
+            <div id="connect-status"></div>
+        </div>
+
+        <!-- Connected Accounts Card -->
+        <div class="card">
+            <h2>Connected Accounts</h2>
+            <ul class="connected-list" id="connected-list">
+                <li style="color: #64748b; list-style: none;" id="no-accounts">No accounts connected yet.</li>
+            </ul>
+        </div>
+
+        <!-- Portfolio Holdings Card -->
+        <div class="card">
+            <h2>Portfolio Holdings</h2>
+            <button class="btn btn-secondary" onclick="fetchHoldings()" id="holdings-btn" disabled>
+                Fetch All Holdings
+            </button>
+            <div id="portfolio-summary"></div>
+            <div id="holdings-container"></div>
+        </div>
+    </div>
+
+    <script>
+        // Load connected accounts on page load
+        window.addEventListener("load", loadConnectedAccounts);
+
+        async function loadConnectedAccounts() {
+            try {
+                const res = await fetch("/api/connected_accounts");
+                const data = await res.json();
+                updateConnectedList(data.connected);
+            } catch (err) {
+                console.error("Failed to load accounts:", err);
+            }
+        }
+
+        function updateConnectedList(accounts) {
+            const list = document.getElementById("connected-list");
+            const holdingsBtn = document.getElementById("holdings-btn");
+
+            if (accounts.length === 0) {
+                list.innerHTML = '<li style="color: #64748b;">No accounts connected yet.</li>';
+                holdingsBtn.disabled = true;
+                return;
+            }
+
+            list.innerHTML = accounts.map(name =>
+                `<li>${name}</li>`
+            ).join("");
+            holdingsBtn.disabled = false;
+        }
+
+        async function connectAccount() {
+            const nickname = document.getElementById("nickname").value.trim().toLowerCase();
+            if (!nickname) {
+                showStatus("connect-status", "Please enter a nickname for this account.", "error");
+                return;
+            }
+
+            showStatus("connect-status", "Opening Plaid Link...", "info");
+
+            try {
+                // Step 1: Get a link token from our server
+                const tokenRes = await fetch("/api/create_link_token", { method: "POST" });
+                const tokenData = await tokenRes.json();
+
+                if (tokenData.error) {
+                    showStatus("connect-status", `Error: ${tokenData.error.error_message}`, "error");
+                    return;
+                }
+
+                // Step 2: Open Plaid Link
+                const handler = Plaid.create({
+                    token: tokenData.link_token,
+                    onSuccess: async (publicToken, metadata) => {
+                        showStatus("connect-status", "Exchanging token...", "info");
+
+                        // Step 3: Exchange public token for access token
+                        const exchangeRes = await fetch("/api/exchange_public_token", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                public_token: publicToken,
+                                nickname: nickname,
+                            }),
+                        });
+                        const exchangeData = await exchangeRes.json();
+
+                        if (exchangeData.status === "success") {
+                            showStatus(
+                                "connect-status",
+                                `Successfully connected "${nickname}"!`,
+                                "success"
+                            );
+                            document.getElementById("nickname").value = "";
+                            loadConnectedAccounts();
+                        } else {
+                            showStatus("connect-status", `Error: ${JSON.stringify(exchangeData.error)}`, "error");
+                        }
+                    },
+                    onExit: (err, metadata) => {
+                        if (err) {
+                            showStatus("connect-status", `Link exited with error: ${err.error_message}`, "error");
+                        }
+                    },
+                });
+
+                handler.open();
+
+            } catch (err) {
+                showStatus("connect-status", `Error: ${err.message}`, "error");
+            }
+        }
+
+        async function fetchHoldings() {
+            const container = document.getElementById("holdings-container");
+            const summary = document.getElementById("portfolio-summary");
+            container.innerHTML = '<p class="loading">Fetching holdings from all brokerages...</p>';
+
+            try {
+                const res = await fetch("/api/holdings");
+                const data = await res.json();
+
+                if (data.holdings.length === 0) {
+                    container.innerHTML = '<p style="color: #64748b;">No holdings found.</p>';
+                    return;
+                }
+
+                // Calculate portfolio summary
+                const totalValue = data.holdings.reduce((sum, h) => sum + (h.current_value || 0), 0);
+                const totalCost = data.holdings.reduce((sum, h) => sum + (h.cost_basis || 0), 0);
+                const totalGain = totalValue - totalCost;
+                const gainPct = totalCost > 0 ? ((totalGain / totalCost) * 100).toFixed(2) : 0;
+
+                summary.innerHTML = `
+                    <div class="summary-row" style="margin-top: 1rem;">
+                        <div class="summary-item">
+                            <div class="summary-label">Total Value</div>
+                            <div class="summary-value">$${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Total Cost Basis</div>
+                            <div class="summary-value">$${totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Total Gain/Loss</div>
+                            <div class="summary-value ${totalGain >= 0 ? 'positive' : 'negative'}">
+                                ${totalGain >= 0 ? '+' : ''}$${totalGain.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${gainPct}%)
+                            </div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Positions</div>
+                            <div class="summary-value">${data.total_positions}</div>
+                        </div>
+                    </div>
+                `;
+
+                // Build holdings table
+                const rows = data.holdings
+                    .filter(h => h.ticker)
+                    .sort((a, b) => (b.current_value || 0) - (a.current_value || 0))
+                    .map(h => {
+                        const gain = (h.current_value || 0) - (h.cost_basis || 0);
+                        const gainClass = gain >= 0 ? "positive" : "negative";
+                        return `
+                            <tr>
+                                <td><strong>${h.ticker || "—"}</strong></td>
+                                <td>${h.name || "—"}</td>
+                                <td>${h.brokerage}</td>
+                                <td>${h.quantity?.toFixed(4) || "—"}</td>
+                                <td>$${h.current_price?.toFixed(2) || "—"}</td>
+                                <td>$${h.current_value?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || "—"}</td>
+                                <td class="${gainClass}">${gain >= 0 ? '+' : ''}$${gain.toFixed(2)}</td>
+                            </tr>
+                        `;
+                    }).join("");
+
+                container.innerHTML = `
+                    <table class="holdings-table">
+                        <thead>
+                            <tr>
+                                <th>Ticker</th>
+                                <th>Name</th>
+                                <th>Brokerage</th>
+                                <th>Qty</th>
+                                <th>Price</th>
+                                <th>Value</th>
+                                <th>Gain/Loss</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                `;
+
+            } catch (err) {
+                container.innerHTML = `<p style="color: #f87171;">Error: ${err.message}</p>`;
+            }
+        }
+
+        function showStatus(elementId, message, type) {
+            const el = document.getElementById(elementId);
+            el.innerHTML = `<div class="status status-${type}">${message}</div>`;
+        }
+    </script>
+</body>
+</html>

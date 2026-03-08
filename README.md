@@ -2,12 +2,7 @@
 
 A self-hosted personal finance system that connects to your real brokerage accounts via Plaid, enriches every position with market data and technicals, runs AI-powered buy/sell/hold analysis using Claude, and surfaces everything in a live Next.js dashboard.
 
-**This is a two-component system:**
-
-| Component | Stack | Role |
-|---|---|---|
-| **Financial Agent** (backend) | Python 3.12, Plaid, Claude AI | Fetches holdings → enriches → analyzes → syncs to Supabase |
-| **Dashboard** (frontend) | Next.js 14, Supabase, Tailwind | Displays portfolio, recommendations, RSU tracking, projections |
+**Single repo. One installer. Run the whole thing.**
 
 ---
 
@@ -18,8 +13,8 @@ A self-hosted personal finance system that connects to your real brokerage accou
 - Enriches every position with technicals (RSI, MACD, Bollinger Bands), fundamentals, and news
 - Sends the full portfolio to Claude for structured analysis: health score, per-ticker recommendations, action items
 - Syncs all pipeline output to Supabase (Postgres)
-- Dashboard reads from Supabase and displays net worth, allocation, RSU grants with live price refresh, wealth projections, and AI recommendations
-- Pipeline runs automatically on a schedule (Mon/Wed/Fri 7am via launchd or cron)
+- Dashboard displays net worth, allocation, RSU grants with live price refresh, wealth projections, and AI recommendations
+- Pipeline runs automatically Mon/Wed/Fri 7am via launchd (macOS) or cron (Linux)
 
 ---
 
@@ -28,126 +23,165 @@ A self-hosted personal finance system that connects to your real brokerage accou
 ```
 Plaid API
     ↓
-Financial Agent (Python)
-    ├── fetch holdings (all brokerages)
-    ├── enrich positions (yfinance: technicals, fundamentals, news)
+agent/ (Python pipeline)
+    ├── fetch holdings across all brokerages
+    ├── enrich positions (yfinance: RSI, MACD, Bollinger Bands, fundamentals, news)
     ├── Claude analysis (buy/sell/hold recommendations)
-    └── sync to Supabase
+    └── sync everything to Supabase
                 ↓
            Supabase (Postgres)
                 ↓
-         Next.js Dashboard
+     Next.js Dashboard (this repo root)
 ```
 
 ---
 
 ## Prerequisites
 
-- **Python 3.12+** and [uv](https://docs.astral.sh/uv/) (backend)
-- **Node.js 18+** and npm (dashboard)
-- A free [Supabase](https://supabase.com/) project
-- A [Plaid](https://plaid.com/) account with Development access (free, up to 100 connections)
-- An [Anthropic API key](https://console.anthropic.com/)
+Before running the installer you need accounts at:
+
+| Service | Purpose | Cost |
+|---|---|---|
+| [Plaid](https://plaid.com/) | Brokerage connections | Free (Development tier) |
+| [Anthropic](https://console.anthropic.com/) | Claude AI analysis | ~$5/month at 3×/week |
+| [Supabase](https://supabase.com/) | Database | Free tier |
+
+And locally:
+- **Python 3.12+** — [python.org/downloads](https://python.org/downloads/)
+- **Node.js 18+** — [nodejs.org](https://nodejs.org/)
 
 ---
 
-## Part 1: Financial Agent (Backend)
-
-### 1. Clone the agent repo
+## Install
 
 ```bash
-git clone https://github.com/mkash25/fin-analyst-powered-by-claude.git
-cd fin-analyst-powered-by-claude
-```
-
-### 2. Install
-
-```bash
+git clone https://github.com/mkash25/Claude-powered-AI-native-financial-dashboard.git
+cd Claude-powered-AI-native-financial-dashboard
 bash install.sh
 ```
 
-This verifies Python 3.12+, installs `uv` if missing, installs all dependencies, copies `.env.example` → `.env`, and creates `logs/` and `reports/` directories.
+The installer:
+1. Checks Python 3.12+ and Node.js 18+
+2. Installs `uv` (Python package manager) if missing
+3. Installs all Python dependencies (`agent/`)
+4. Installs all Node dependencies (dashboard)
+5. Walks you through entering and **live-validating** every API key
+6. Writes `agent/.env` with all credentials confirmed working
 
-**Manual install (without install.sh):**
+**Manual install (without the wizard):**
 
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh   # install uv
-uv sync                                             # install dependencies
-cp .env.example .env                                # configure credentials
+# Python backend
+curl -LsSf https://astral.sh/uv/install.sh | sh
+cd agent && uv sync && cp .env.example .env && cd ..
+
+# Dashboard
+npm install
 ```
 
-### 3. Configure credentials
+---
 
-Edit `.env`:
+## Configuration
 
-| Variable | Required | Where to find it |
-|---|---|---|
-| `PLAID_CLIENT_ID` | Yes | [dashboard.plaid.com](https://dashboard.plaid.com) → Developers → Keys |
-| `PLAID_SECRET` | Yes | Same page — use the **Development** secret |
-| `PLAID_ENV` | Yes | Set to `development` |
-| `ANTHROPIC_API_KEY` | Yes | [console.anthropic.com](https://console.anthropic.com/) → API Keys |
-| `SUPABASE_URL` | Yes | Supabase → Project Settings → API → Project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase → Project Settings → API → service_role (secret) |
-| `SENDGRID_API_KEY` | Optional | Email reports |
-| `SLACK_WEBHOOK_URL` | Optional | Slack reports |
-| `PUSHOVER_USER_KEY` | Optional | Push notifications |
+### Agent credentials (`agent/.env`)
 
-### 4. Get Plaid Development access
+The installer wizard handles this. Keys required:
+
+| Variable | Where to find it |
+|---|---|
+| `PLAID_CLIENT_ID` | [dashboard.plaid.com](https://dashboard.plaid.com) → Developers → Keys |
+| `PLAID_SECRET` | Same page — use the **Development** secret |
+| `PLAID_ENV` | Set to `development` |
+| `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com/) → API Keys |
+| `SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → service_role |
+| `SENDGRID_API_KEY` | Optional — email reports |
+| `SLACK_WEBHOOK_URL` | Optional — Slack reports |
+| `PUSHOVER_USER_KEY` / `PUSHOVER_APP_TOKEN` | Optional — push notifications |
+
+### Dashboard credentials (`.env.local`)
+
+```bash
+cp .env.local.example .env.local
+```
+
+| Variable | Where to find it |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → anon/public key |
+| `ANTHROPIC_API_KEY` | console.anthropic.com (server-side only — never exposed to browser) |
+
+---
+
+## Getting Plaid Development Access
 
 Plaid Development is **free** and supports up to 100 real account connections.
 
 1. Go to [dashboard.plaid.com](https://dashboard.plaid.com) → Account → Billing
-2. Apply for Development access. Use case: `"Personal portfolio monitoring and analytics"`
+2. Apply for Development access
+   - Use case: `"Personal portfolio monitoring and analytics"`
+   - Expected connections: however many brokerages you have
 3. Approval is usually 1–3 business days
-4. Once approved, get your Development secret from Developers → Keys and update `.env`
+4. Once approved, copy your Development secret and use it in the installer
 
-### 5. Set up the Supabase database
+See `agent/PLAID_PRODUCTION_GUIDE.md` for detailed step-by-step instructions.
 
-In [Supabase Dashboard](https://supabase.com/dashboard) → **SQL Editor → New Query**, paste the contents of `supabase/migrations/001_initial_schema.sql` from the dashboard repo (see Part 2) and run it.
+---
 
-### 6. Connect your brokerage accounts
+## First-time Setup (after install)
+
+### 1. Set up the database
+
+In [Supabase Dashboard](https://supabase.com/dashboard) → **SQL Editor → New Query**, paste and run `supabase/migrations/001_initial_schema.sql`.
+
+### 2. Create your dashboard account
+
+In Supabase Dashboard → **Authentication → Users → Invite user**, add your email. Or enable email/password sign-ups under **Authentication → Providers → Email** and register at `http://localhost:3000/login`.
+
+### 3. Connect your brokerage accounts
 
 ```bash
-uv run python connect_real_account.py
+cd agent && uv run python connect_real_account.py
 ```
 
-Open [http://localhost:5555](http://localhost:5555) in your browser. For each brokerage, enter a nickname and click **Connect Account via Plaid**. Plaid Link opens your brokerage's login page — sign in and select your investment account.
+Open [http://localhost:5555](http://localhost:5555). For each brokerage, enter a nickname and click **Connect Account via Plaid**.
 
 | Nickname | Brokerage |
 |---|---|
-| `stash` | Stash |
 | `robinhood` | Robinhood |
 | `sofi` | SoFi Invest |
+| `stash` | Stash |
 | `fidelity` | Fidelity |
 | `wealthfront` | Wealthfront |
 | `acorns` | Acorns |
 
-Access tokens are saved to `access_tokens.json` (gitignored, encrypted at rest). Stop the server when done.
+Access tokens are saved to `agent/access_tokens.json` (gitignored, encrypted at rest).
 
-### 7. Run the pipeline
+### 4. Run the pipeline
 
 ```bash
-uv run python run_pipeline.py
+cd agent && uv run python run_pipeline.py
 ```
 
-This runs notebooks 02–05 in sequence (fetch → enrich → analyze → notify) then syncs all output to Supabase.
+This fetches holdings, enriches every position, runs Claude analysis, and syncs everything to Supabase.
 
-**CLI commands (after `uv sync`):**
-
-| Command | Description |
-|---|---|
-| `fin-pipeline` | Run the full pipeline |
-| `fin-sync` | Sync latest output to Supabase only |
-| `fin-poller` | Start the on-demand refresh daemon |
-| `fin-server` | Start the Plaid Link server (localhost:5000) |
-
-### 8. Schedule automated runs
-
-**macOS (launchd) — recommended:**
+### 5. Start the dashboard
 
 ```bash
-sed "s|<PROJECT_DIR>|$PWD|g" \
-    scheduler/macos/com.finanalyst.pipeline.plist.template \
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) and sign in.
+
+---
+
+## Automated Scheduling
+
+### macOS (launchd) — recommended
+
+```bash
+sed "s|<PROJECT_DIR>|$(pwd)/agent|g" \
+    agent/scheduler/macos/com.finanalyst.pipeline.plist.template \
     > ~/Library/LaunchAgents/com.finanalyst.pipeline.plist
 
 launchctl load ~/Library/LaunchAgents/com.finanalyst.pipeline.plist
@@ -155,154 +189,110 @@ launchctl load ~/Library/LaunchAgents/com.finanalyst.pipeline.plist
 
 Runs Mon/Wed/Fri at 7am. Survives reboots.
 
-**Linux (cron):**
+### Linux (cron)
 
 ```bash
 crontab -e
-# Add the line from: scheduler/linux/crontab.example
+# Add the line from: agent/scheduler/linux/crontab.example
 ```
 
 ---
 
-## Part 2: Dashboard (Frontend)
+## CLI Commands
 
-### 1. Clone the dashboard repo
+From the `agent/` directory (after `uv sync`):
 
-```bash
-git clone https://github.com/mkash25/Claude-powered-AI-native-financial-dashboard.git
-cd Claude-powered-AI-native-financial-dashboard
-```
-
-### 2. Install dependencies
-
-```bash
-npm install
-```
-
-### 3. Configure environment variables
-
-```bash
-cp .env.local.example .env.local
-```
-
-Edit `.env.local`:
-
-| Variable | Where to find it |
+| Command | Description |
 |---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → anon/public key |
-| `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com/) → API Keys (server-side only) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → service_role (optional for dashboard) |
+| `uv run python run_pipeline.py` | Run the full pipeline |
+| `fin-pipeline` | Same — installed CLI shortcut |
+| `fin-sync` | Sync latest output to Supabase only |
+| `fin-poller` | Start the on-demand refresh daemon |
 
-### 4. Set up the database schema
+---
 
-If you haven't already done this from the agent setup:
+## Production Deploy
 
-In Supabase Dashboard → **SQL Editor → New Query**, paste and run `supabase/migrations/001_initial_schema.sql`.
-
-### 5. Create a user account
-
-In Supabase Dashboard → **Authentication → Users → Invite user**, add your email.
-
-Or enable email/password under **Authentication → Providers → Email** and register at `http://localhost:3000/login`.
-
-### 6. Run the dashboard
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) and sign in. The dashboard is populated by the agent pipeline — run the agent at least once first.
-
-### 7. Production build / deploy
+**Dashboard (Vercel):**
 
 ```bash
 npm run build && npm run start
 ```
 
-Or deploy to [Vercel](https://vercel.com/) — zero config for Next.js. Set the four environment variables in Vercel project settings.
+Or deploy to [Vercel](https://vercel.com/) — zero config for Next.js. Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `ANTHROPIC_API_KEY` in Vercel project settings.
+
+**Agent (scheduled on your machine):** The launchd/cron scheduler above keeps it running automatically. No server needed.
 
 ---
 
 ## Project Structure
 
 ```
-financial-analyst-agent/          # Backend (Python)
-├── install.sh                    # One-shot setup
-├── run_pipeline.py               # Pipeline orchestrator
-├── sync_to_supabase.py           # Push output to Supabase
-├── poll_refresh.py               # On-demand refresh daemon
-├── connect_real_account.py       # Browser-based Plaid account connector
-├── plaid_config.py               # Plaid client
-├── token_store.py                # Encrypted token storage
-├── notebooks/                    # Jupyter notebooks (01–07)
-└── scheduler/                    # launchd and cron templates
-
-fin-analyst-dashboard/            # Frontend (Next.js)
-├── src/
-│   ├── app/                      # Next.js App Router (pages + API routes)
-│   ├── components/               # Dashboard UI components
+./
+├── install.sh                    # One-shot setup for everything
+├── agent/                        # Python backend
+│   ├── run_pipeline.py           # Pipeline orchestrator
+│   ├── sync_to_supabase.py       # Push output to Supabase
+│   ├── poll_refresh.py           # On-demand refresh daemon
+│   ├── connect_real_account.py   # Browser-based Plaid account connector
+│   ├── plaid_config.py           # Plaid client
+│   ├── token_store.py            # Encrypted token storage
+│   ├── pyproject.toml            # Python dependencies
+│   ├── .env.example              # Credential template
+│   ├── notebooks/                # Jupyter notebooks (01–07)
+│   ├── scheduler/                # launchd and cron templates
+│   └── PLAID_PRODUCTION_GUIDE.md # Step-by-step Plaid setup
+├── src/                          # Next.js dashboard
+│   ├── app/                      # App Router (pages + API routes)
+│   ├── components/               # UI components
 │   ├── hooks/                    # React hooks
 │   └── lib/                      # Supabase client, types, queries
-└── supabase/migrations/          # SQL schema
+├── supabase/migrations/          # SQL schema (run once in Supabase)
+└── .env.local.example            # Dashboard credential template
 ```
-
----
-
-## Security
-
-- **Never commit** `.env`, `access_tokens.json`, or `access_tokens.enc` — all are gitignored
-- Access tokens are encrypted at rest using PBKDF2+Fernet
-- `SUPABASE_SERVICE_ROLE_KEY` bypasses RLS — keep it server-side only, never in browser code
-- `ANTHROPIC_API_KEY` is server-side only in the dashboard (`/api/` routes); never sent to the browser
-- This is a single-user tool — RLS policies allow any authenticated Supabase user full read access, so keep your Supabase project private
 
 ---
 
 ## API Cost Estimate (3 runs/week)
 
-Costs are based on **actual token usage** measured across 15 real pipeline runs.
+Based on **actual token usage** across 15 real pipeline runs.
 
 ### Claude API (claude-sonnet-4-6)
-
-Each pipeline run sends your full enriched portfolio (holdings + technicals + fundamentals + news) to Claude for analysis.
 
 | Metric | Actual average |
 |---|---|
 | Input tokens per run | ~46,600 |
 | Output tokens per run | ~14,800 |
-| Total tokens per run | ~61,400 |
 
-**Pricing** (claude-sonnet-4-6 as of 2025): $3.00 / 1M input tokens · $15.00 / 1M output tokens
+Pricing (claude-sonnet-4-6): $3.00 / 1M input · $15.00 / 1M output
 
-| Period | Runs | Claude cost |
+| Period | Runs | Cost |
 |---|---|---|
-| Per run | 1 | **~$0.36** |
-| Per week | 3 | **~$1.09** |
-| Per month | ~13 | **~$4.70** |
-| Per year | 156 | **~$56** |
+| Per run | 1 | ~$0.36 |
+| Per week | 3 | ~$1.09 |
+| Per month | ~13 | ~$4.70 |
+| Per year | 156 | ~$56 |
 
-### All other services
+### Everything else
 
 | Service | Cost |
 |---|---|
 | Plaid (Development, up to 100 connections) | Free |
-| Supabase (free tier — 500 MB DB, 2 GB bandwidth) | Free |
+| Supabase (free tier) | Free |
 | Yahoo Finance (live RSU price refresh) | Free |
-| SendGrid (up to 100 emails/day on free tier) | Free |
-| Vercel (dashboard hosting, hobby tier) | Free |
+| SendGrid (up to 100 emails/day) | Free |
+| Vercel (hobby tier) | Free |
 
-### Total
+**Total: ~$5/month**, driven entirely by the Claude API.
 
-Running this system 3x/week costs approximately **$4–5/month**, driven entirely by the Claude API. All other services stay within free tiers for personal use.
-
-> Token counts will grow if your portfolio grows (more positions = larger enrichment payload). A portfolio with significantly more tickers than average will cost proportionally more.
+> Token count scales with portfolio size. More tickers = larger enrichment payload = slightly higher cost.
 
 ---
 
-## Data Notes
+## Security
 
-- **Plaid Development** is free for up to 100 connections — more than enough for personal use
-- Plaid refreshes investment data once daily (previous trading day's close)
-- Live stock prices for RSU valuation are fetched from **Yahoo Finance** — no API key required
-- The Recalc button in the dashboard header fetches fresh prices and updates RSU values in real time
+- `agent/.env`, `access_tokens.json`, and `access_tokens.enc` are all gitignored — never committed
+- Brokerage access tokens are encrypted at rest using PBKDF2+Fernet
+- `SUPABASE_SERVICE_ROLE_KEY` bypasses RLS — server-side only, never in browser code
+- `ANTHROPIC_API_KEY` is used server-side only in the dashboard — never sent to the browser
+- This is a single-user tool — keep your Supabase project private
