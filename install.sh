@@ -285,8 +285,11 @@ test_key() {
     fi
 }
 
-# ── Status tracking ────────────────────────────────────────────────────────────
-declare -A STATUS=()
+# ── Status tracking (plain vars for bash 3.2 compatibility) ───────────────────
+STATUS_plaid=""; STATUS_anthropic=""; STATUS_supabase=""
+STATUS_sendgrid=""; STATUS_slack=""; STATUS_pushover=""
+set_status() { eval "STATUS_${1}=${2}"; }
+get_status() { eval "echo \"\${STATUS_${1}:-}\""; }
 
 if [[ "$WIZARD_NEEDED" == "true" ]]; then
 
@@ -319,14 +322,14 @@ if [[ "$WIZARD_NEEDED" == "true" ]]; then
             "secret"
 
         if test_key "Plaid" "plaid" "${PLAID_CLIENT_ID}::${PLAID_SECRET}" "$PLAID_ENV"; then
-            STATUS[plaid]="ok"
+            set_status plaid "ok"
             break
         else
             echo ""
             printf "  Retry Plaid credentials? [Y/n] "
             read -r retry
             if [[ "$retry" =~ ^[Nn]$ ]]; then
-                STATUS[plaid]="failed"
+                set_status plaid "failed"
                 break
             fi
         fi
@@ -349,14 +352,14 @@ if [[ "$WIZARD_NEEDED" == "true" ]]; then
         fi
 
         if test_key "Anthropic" "anthropic" "$ANTHROPIC_API_KEY"; then
-            STATUS[anthropic]="ok"
+            set_status anthropic "ok"
             break
         else
             echo ""
             printf "  Retry Anthropic key? [Y/n] "
             read -r retry
             if [[ "$retry" =~ ^[Nn]$ ]]; then
-                STATUS[anthropic]="failed"
+                set_status anthropic "failed"
                 break
             fi
         fi
@@ -387,14 +390,14 @@ if [[ "$WIZARD_NEEDED" == "true" ]]; then
         fi
 
         if test_key "Supabase" "supabase" "$SUPABASE_SERVICE_ROLE_KEY" "$SUPABASE_URL"; then
-            STATUS[supabase]="ok"
+            set_status supabase "ok"
             break
         else
             echo ""
             printf "  Retry Supabase credentials? [Y/n] "
             read -r retry
             if [[ "$retry" =~ ^[Nn]$ ]]; then
-                STATUS[supabase]="failed"
+                set_status supabase "failed"
                 break
             fi
         fi
@@ -420,14 +423,14 @@ if [[ "$WIZARD_NEEDED" == "true" ]]; then
             fi
 
             if test_key "SendGrid" "sendgrid" "$SENDGRID_API_KEY"; then
-                STATUS[sendgrid]="ok"
+                set_status sendgrid "ok"
                 break
             else
                 echo ""
                 printf "  Retry SendGrid key? [Y/n] "
                 read -r retry
                 if [[ "$retry" =~ ^[Nn]$ ]]; then
-                    STATUS[sendgrid]="failed"
+                    set_status sendgrid "failed"
                     break
                 fi
             fi
@@ -444,7 +447,7 @@ if [[ "$WIZARD_NEEDED" == "true" ]]; then
         SENDGRID_API_KEY=""
         SENDGRID_FROM_EMAIL=""
         NOTIFICATION_EMAIL=""
-        STATUS[sendgrid]="skipped"
+        set_status sendgrid "skipped"
     fi
 
     # ── Slack (optional) ───────────────────────────────────────────────────────
@@ -466,7 +469,7 @@ if [[ "$WIZARD_NEEDED" == "true" ]]; then
             fi
 
             if test_key "Slack" "slack" "$SLACK_WEBHOOK_URL"; then
-                STATUS[slack]="ok"
+                set_status slack "ok"
                 echo -e "  ${DIM}A test message was posted to your Slack channel.${NC}"
                 break
             else
@@ -474,14 +477,14 @@ if [[ "$WIZARD_NEEDED" == "true" ]]; then
                 printf "  Retry Slack webhook? [Y/n] "
                 read -r retry
                 if [[ "$retry" =~ ^[Nn]$ ]]; then
-                    STATUS[slack]="failed"
+                    set_status slack "failed"
                     break
                 fi
             fi
         done
     else
         SLACK_WEBHOOK_URL=""
-        STATUS[slack]="skipped"
+        set_status slack "skipped"
     fi
 
     # ── Pushover (optional) ────────────────────────────────────────────────────
@@ -499,11 +502,11 @@ if [[ "$WIZARD_NEEDED" == "true" ]]; then
             "Pushover App Token" \
             "pushover.net → Your Applications → create one for this agent" \
             "secret"
-        STATUS[pushover]="saved"
+        set_status pushover "saved"
     else
         PUSHOVER_USER_KEY=""
         PUSHOVER_APP_TOKEN=""
-        STATUS[pushover]="skipped"
+        set_status pushover "skipped"
     fi
 
     # ── Write .env ─────────────────────────────────────────────────────────────
@@ -546,9 +549,10 @@ EOF
 
     print_status() {
         local label="$1" key="$2"
-        case "${STATUS[$key]:-unknown}" in
+        local val; val=$(get_status "$key")
+        case "${val:-unknown}" in
             ok)      ok "$label" ;;
-            failed)  fail "$label — credentials saved but connection failed. Fix in .env and re-run." ;;
+            failed)  fail "$label — credentials saved but connection failed. Fix in agent/.env and re-run." ;;
             skipped) skip "$label (skipped)" ;;
             saved)   ok "$label (saved, not verified)" ;;
             *)       skip "$label (not configured)" ;;
@@ -566,7 +570,7 @@ EOF
     # Warn if any required service failed
     REQUIRED_FAILED=false
     for svc in plaid anthropic supabase; do
-        if [[ "${STATUS[$svc]:-}" == "failed" ]]; then
+        if [[ "$(get_status "$svc")" == "failed" ]]; then
             REQUIRED_FAILED=true
         fi
     done
