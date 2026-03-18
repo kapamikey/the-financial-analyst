@@ -166,7 +166,6 @@ WATCHLIST RULES:
 IPO COVERAGE — Search for upcoming IPOs each briefing.
 
 SCOPE: All IPOs pricing this week + next 30 days. PRIORITY: AI, space, defense, clean energy, cybersecurity, fintech.
-ALWAYS TRACK: SpaceX/Starlink IPO (targeting mid-2026, ~$1.5T valuation)
 
 FOR EACH RELEVANT IPO: Company snapshot (1-2 sentences) → Thematic fit → Valuation check → Lockup/float → Signal: 🟢 BUY / 🟡 WAIT / 🔴 SKIP
 
@@ -182,6 +181,9 @@ SPACEX TRACKER: Status [search latest] | ~$1.5T val | June 2026 target | Pre-IPO
 
 <output_format>
 Generate the briefing in EXACTLY this structure. Keep it scannable on mobile.
+
+## 1A - Performance
+- What is benchmark - what is my return
 
 ## 1 — TOP 3 STORIES
 For each: What happened (2-3 sentences) → Why it matters to MY portfolio → Tag: [AI] [SPACE] [ENERGY] [EM] [MACRO] [RATES] [DEFENSE] [CRYPTO]
